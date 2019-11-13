@@ -13,13 +13,15 @@ f_create_list () {
     --text="Select a kernel module" \
     --column="Module" --column="Description" \
     "if_iwn" "Intel IEEE 802.11n wireless network driver" \
+    2>&1 | tee /tmp/fury-wifi-tool.log \
 
 }
 
 # Function create a dialog for firmware list
 f_create_fwlist () {
-    fwselect=$1
-    find /boot/kernel -name 'iwn*' | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "_iwniles"
+    sed -i -r 's/.*_//' /tmp/fury-wifi-tool.log
+    getfw=`cat /tmp/fury-wifi-tool.log`
+    find /boot/kernel -name "$getfw*" | cut -d '/' -f4 | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module"
 }
 
 # Main function
