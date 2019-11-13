@@ -1,0 +1,30 @@
+#!/usr/local/bin/bash
+
+# Only run as superuser
+#if [ "$(id -u)" != "0" ]; then
+#  echo "This script must be run as root" 1>&2
+#  exit 1
+#fi
+
+# Function create a dialog for module list
+f_create_list () {
+    zenity --list --width=640 --height=480 \
+    --title="FuryBSD Wifi Tool" \
+    --text="Select a kernel module" \
+    --column="Module" --column="Description" \
+    "if_iwn" "Intel IEEE 802.11n wireless network driver" \
+
+}
+
+# Function create a dialog for firmware list
+f_create_fwlist () {
+    fwselect=$1
+    find /boot/kernel -name 'iwn*' | zenity --list --title "Search Results" --text "Finding all firmware modules.." --column "_iwniles"
+}
+
+# Main function
+f_main () {
+    f_create_list 
+    f_create_fwlist iwn
+}
+f_main
