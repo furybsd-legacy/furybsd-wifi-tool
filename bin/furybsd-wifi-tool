@@ -28,7 +28,7 @@ f_create_list () {
 f_create_fwlist () {
     sed -i -r 's/.*_//' /tmp/fury-wifi-tool-kmod.log
     getkmod=`cat /tmp/fury-wifi-tool-kmod.log`
-    find /boot/kernel -name "$getkmod*" | cut -d '/' -f4 | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module" | tee /tmp/fury-wifi-tool-fw.log
+    ls /boot/kernel/ | grep "${getkmod} *" | grep fw | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module" | tee /tmp/fury-wifi-tool-fw.log
     getfw=`cat /tmp/fury-wifi-tool-fw.log`
     sysrc -f /etc/rc.conf kld_list+="${getfw}"
     service kld restart
