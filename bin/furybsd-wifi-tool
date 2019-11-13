@@ -1,10 +1,17 @@
 #!/usr/local/bin/bash
 
 # Only run as superuser
-#if [ "$(id -u)" != "0" ]; then
-#  echo "This script must be run as root" 1>&2
-#  exit 1
-#fi
+if [ "$(id -u)" != "0" ]; then
+  echo "This script must be run as root" 1>&2
+  exit 1
+fi
+
+# Function to cleanup before and after tmp files using to record selection
+f_cleanup () {
+  rm /tmp/fury-wifi-tool-fw.log >/dev/null 2>/dev/null || true
+  rm /tmp/fury-wifi-tool-kmod.log >/dev/null 2>/dev/null || true
+  rm /tmp/fury-wifi-tool-kmod.log-r >/dev/null 2>/dev/null || true
+}
 
 # Function create a dialog for module list
 f_create_list () {
@@ -13,20 +20,25 @@ f_create_list () {
     --text="Select a kernel module" \
     --column="Module" --column="Description" \
     "if_iwn" "Intel IEEE 802.11n wireless network driver" \
-    2>&1 | tee /tmp/fury-wifi-tool.log \
+    2>&1 | tee /tmp/fury-wifi-tool-kmod.log \
 
 }
 
 # Function create a dialog for firmware list
 f_create_fwlist () {
-    sed -i -r 's/.*_//' /tmp/fury-wifi-tool.log
-    getfw=`cat /tmp/fury-wifi-tool.log`
-    find /boot/kernel -name "$getfw*" | cut -d '/' -f4 | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module"
+    sed -i -r 's/.*_//' /tmp/fury-wifi-tool-kmod.log
+    getkmod=`cat /tmp/fury-wifi-tool-kmod.log`
+    find /boot/kernel -name "$getkmod*" | cut -d '/' -f4 | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module" | tee /tmp/fury-wifi-tool-fw.log
+    getfw=`cat /tmp/fury-wifi-tool-fw.log`
+    sysrc -f /etc/rc.conf kld_list+="${getfw}"
+    service kld restart
 }
 
 # Main function
 f_main () {
+    f_cleanup
     f_create_list 
-    f_create_fwlist iwn
+    f_create_fwlist
+    f_cleanup
 }
 f_main
