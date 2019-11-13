@@ -19,7 +19,7 @@ f_create_list () {
 # Function create a dialog for firmware list
 f_create_fwlist () {
     fwselect=$1
-    find /boot/kernel -name 'iwn*' | zenity --list --title "Search Results" --text "Finding all firmware modules.." --column "_iwniles"
+    find /boot/kernel -name 'iwn*' | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "_iwniles"
 }
 
 # Main function
