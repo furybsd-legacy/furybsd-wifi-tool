@@ -11,6 +11,7 @@ f_cleanup () {
   rm /tmp/fury-wifi-tool-fw.log >/dev/null 2>/dev/null || true
   rm /tmp/fury-wifi-tool-kmod.log >/dev/null 2>/dev/null || true
   rm /tmp/fury-wifi-tool-kmod.log-r >/dev/null 2>/dev/null || true
+  rm /tmp/fury-wifi-tool-fw-all.log >/dev/null 2>/dev/null || true
 }
 
 # Function create a dialog for module list
@@ -20,7 +21,12 @@ f_create_list () {
     --text="Select a kernel module" \
     --column="Module" --column="Description" \
     "if_iwn" "Intel IEEE 802.11n wireless network driver" \
-    2>&1 | tee /tmp/fury-wifi-tool-kmod.log \
+    "if_iwm" "Intel IEEE 802.11ac wireless network driver" \
+    2>&1 | tee /tmp/fury-wifi-tool-kmod.log
+    grep -q "iwm" /tmp/fury-wifi-tool-kmod.log
+    if [[ $? != 1 ]]; then
+      sysrc -f /etc/rc.conf kld_list+"if_iwm"
+    fi
 
 }
 
@@ -28,9 +34,16 @@ f_create_list () {
 f_create_fwlist () {
     sed -i -r 's/.*_//' /tmp/fury-wifi-tool-kmod.log
     getkmod=`cat /tmp/fury-wifi-tool-kmod.log`
+    ls /boot/kernel/ | grep "${getkmod} *" | grep fw | cut -d '.' -f1 > /tmp/fury-wifi-tool-fw-all.log
+    getallfw=`cat /tmp/fury-wifi-tool-fw-all.log`
     ls /boot/kernel/ | grep "${getkmod} *" | grep fw | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module" | tee /tmp/fury-wifi-tool-fw.log
     getfw=`cat /tmp/fury-wifi-tool-fw.log`
+    sysrc -f /etc/rc.conf kld_list-="${getallfw}"
     sysrc -f /etc/rc.conf kld_list+="${getfw}"
+for i in $getallfw
+do
+   kldunload $i >/dev/null 2>/dev/null || true
+done
     service kld restart
 }
 
