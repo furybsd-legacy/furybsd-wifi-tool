@@ -6,52 +6,26 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
-# Function to cleanup before and after tmp files using to record selection
-f_cleanup () {
-  rm /tmp/fury-wifi-tool-fw.log >/dev/null 2>/dev/null || true
-  rm /tmp/fury-wifi-tool-kmod.log >/dev/null 2>/dev/null || true
-  rm /tmp/fury-wifi-tool-kmod.log-r >/dev/null 2>/dev/null || true
-  rm /tmp/fury-wifi-tool-fw-all.log >/dev/null 2>/dev/null || true
-}
-
-# Function create a dialog for module list
-f_create_list () {
-    zenity --list --width=640 --height=480 \
-    --title="FuryBSD Wifi Tool" \
-    --text="Select a kernel module" \
-    --column="Module" --column="Description" \
-    "if_iwn" "Intel IEEE 802.11n wireless network driver" \
-    "if_iwm" "Intel IEEE 802.11ac wireless network driver" \
-    2>&1 | tee /tmp/fury-wifi-tool-kmod.log
-    grep -q "iwm" /tmp/fury-wifi-tool-kmod.log
-    if [[ $? != 1 ]]; then
-      sysrc -f /etc/rc.conf kld_list+"if_iwm"
-    fi
-
-}
-
-# Function create a dialog for firmware list
-f_create_fwlist () {
-    sed -i -r 's/.*_//' /tmp/fury-wifi-tool-kmod.log
-    getkmod=`cat /tmp/fury-wifi-tool-kmod.log`
-    ls /boot/kernel/ | grep "${getkmod} *" | grep fw | cut -d '.' -f1 > /tmp/fury-wifi-tool-fw-all.log
-    getallfw=`cat /tmp/fury-wifi-tool-fw-all.log`
-    ls /boot/kernel/ | grep "${getkmod} *" | grep fw | cut -d '.' -f1 | zenity --list --title "Search Results" --width=640 --height=480 --text "Finding all firmware modules.." --column "Module" | tee /tmp/fury-wifi-tool-fw.log
-    getfw=`cat /tmp/fury-wifi-tool-fw.log`
-    sysrc -f /etc/rc.conf kld_list-="${getallfw}"
-    sysrc -f /etc/rc.conf kld_list+="${getfw}"
-for i in $getallfw
+# Check for any new wifi devices to setup
+for wnic in `sysctl -b net.wlan.devices 2>/dev/null`
 do
-   kldunload $i >/dev/null 2>/dev/null || true
-done
-    service kld restart
-}
+  cat /etc/rc.conf 2>/dev/null | grep -q "wlans_${wnic}="
+  if [ $? -ne 0 ] ; then
+    # We have a wifi device, setup a wlan* entry for it
+    grep -q "^wlans_" /etc/rc.conf
+      if [ $? -eq 0 ] ; then
+        WLANCOUNT=`cat /etc/rc.conf | grep "^wlans_" | wc -l | awk '{print $1}'`
+      else
+      WLANCOUNT="0"
+      WLAN="wlan${WLANCOUNT}"
 
-# Main function
-f_main () {
-    f_cleanup
-    f_create_list 
-    f_create_fwlist
-    f_cleanup
-}
-f_main
+      # Save the wlan interface
+      echo "wlans_${wnic}=\"${WLAN}\"" >>/etc/rc.conf
+      echo "ifconfig_${WLAN}=\"WPA DHCP\"" >>/etc/rc.conf
+      echo "ifconfig_${WLAN}_ipv6=\"inet6 accept_rtadv\"" >> /etc/rc.conf
+      service netif restart
+    fi
+  fi
+done
+
+/usr/local/bin/wifimgr
