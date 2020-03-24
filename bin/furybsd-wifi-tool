@@ -22,9 +22,7 @@ do
       # Save the wlan interface
       sysrc wlans_${wnic}="${WLAN}"
       sysrc ifconfig_${WLAN}="WPA"
-      service netif restart
+      service netif restart ${WLAN}
     fi
   fi
 done
-
-/usr/local/sbin/wpa_gui -q
