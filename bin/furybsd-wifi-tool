@@ -28,4 +28,4 @@ do
   fi
 done
 
-/usr/local/bin/wifimgr
+/usr/local/sbin/wpa_gui -q
