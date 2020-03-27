@@ -8,6 +8,7 @@ fi
 
 rm /tmp/wifi-devices-found.list 2>/dev/null || true
 rm /tmp/wifi-selection 2>/dev/null || true
+rm /tmp/wlan-selection 2>/dev/null || true
 
 # Check for existing wifi devices in rc.conf
 grep -q "^wlans" /etc/rc.conf
@@ -38,10 +39,15 @@ if [ $? -ne 0 ] ; then
   sysrc wlans_${wnic}="${WLAN}"
   sysrc ifconfig_${WLAN}="WPA"
   service netif restart ${WLAN}
-  zenity --info --no-wrap --text="${wnic} is now enabled in /etc/rc.conf"
+  cat /etc/rc.conf | grep ${wnic} | cut -d'"' -f2 > /tmp/wlan-selection
+  WLAN=$(cat /tmp/wlan-selection)
+  wpa_gui -i ${WLAN}
 else
-  zenity --info --no-wrap --text="${wnic} is already enabled in rc.conf"
+  cat /etc/rc.conf | grep ${wnic} | cut -d'"' -f2 > /tmp/wlan-selection
+  WLAN=$(cat /tmp/wlan-selection)
+  wpa_gui -i ${WLAN}
 fi
 
 rm /tmp/wifi-devices-found.list 2>/dev/null || true
 rm /tmp/wifi-selection 2>/dev/null || true
+rm /tmp/wlan-selection 2>/dev/null || true
