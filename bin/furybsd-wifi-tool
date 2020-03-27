@@ -10,6 +10,14 @@ rm /tmp/wifi-devices-found.list 2>/dev/null || true
 rm /tmp/wifi-selection 2>/dev/null || true
 rm /tmp/wlan-selection 2>/dev/null || true
 
+# Check for no wifi devices and exit if none found
+
+wnic=$(sysctl -b net.wlan.devices)
+if [ "$?" -eq 0 ] && [ -z "${wnic}" ] ; then
+  zenity --warning --no-wrap --text="No wlan devices found"
+  exit 0
+fi
+
 # Check for existing wifi devices in rc.conf
 grep -q "^wlans" /etc/rc.conf
 if [ $? -eq 0 ] ; then
