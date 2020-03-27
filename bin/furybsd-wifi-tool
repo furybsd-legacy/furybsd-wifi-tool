@@ -6,23 +6,42 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+rm /tmp/wifi-devices-found.list 2>/dev/null || true
+rm /tmp/wifi-selection 2>/dev/null || true
+
+# Check for existing wifi devices in rc.conf
+grep -q "^wlans" /etc/rc.conf
+if [ $? -eq 0 ] ; then
+  WLANCOUNT=$(cat /etc/rc.conf | grep "^wlans_" | wc -l | awk '{print 1}')
+else
+  WLANCOUNT="0"
+fi
+WLAN="wlan${WLANCOUNT}"
+
+
 # Check for any new wifi devices to setup
 for wnic in `sysctl -b net.wlan.devices 2>/dev/null`
 do
-  cat /etc/rc.conf 2>/dev/null | grep -q "wlans_${wnic}="
-  if [ $? -ne 0 ] ; then
-    # We have a wifi device, setup a wlan* entry for it
-    grep -q "^wlans_" /etc/rc.conf
-      if [ $? -eq 0 ] ; then
-        WLANCOUNT=`cat /etc/rc.conf | grep "^wlans_" | wc -l | awk '{print $1}'`
-      else
-      WLANCOUNT="0"
-      WLAN="wlan${WLANCOUNT}"
-
-      # Save the wlan interface
-      sysrc wlans_${wnic}="${WLAN}"
-      sysrc ifconfig_${WLAN}="WPA"
-      service netif restart ${WLAN}
-    fi
-  fi
+  echo ${wnic} >> /tmp/wifi-devices-found.list
 done
+
+# Present list of detected wifi devices
+cat /tmp/wifi-devices-found.list | zenity --list --width=640 --height=480 \
+--title="FuryBSD Wifi Tool" \
+--text="Detected wifi devices" \
+--column="Module" | tee /tmp/wifi-selection
+
+# Now configure the wifi device in rc.conf based on user selection
+wnic=$(cat /tmp/wifi-selection)
+cat /etc/rc.conf 2>/dev/null | grep -q "wlans_${wnic}="
+if [ $? -ne 0 ] ; then
+  sysrc wlans_${wnic}="${WLAN}"
+  sysrc ifconfig_${WLAN}="WPA"
+  service netif restart ${WLAN}
+  zenity --info --no-wrap --text="${wnic} is now enabled in /etc/rc.conf"
+else
+  zenity --info --no-wrap --text="${wnic} is already enabled in rc.conf"
+fi
+
+rm /tmp/wifi-devices-found.list 2>/dev/null || true
+rm /tmp/wifi-selection 2>/dev/null || true
