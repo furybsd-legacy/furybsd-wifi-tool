@@ -42,6 +42,9 @@ cat /tmp/wifi-devices-found.list | zenity --list --width=640 --height=480 \
 
 # Now configure the wifi device in rc.conf based on user selection
 wnic=$(cat /tmp/wifi-selection)
+if [ "$?" -eq 0 ] && [ -z "${wnic}" ] ; then
+  exit 0
+fi
 cat /etc/rc.conf 2>/dev/null | grep -q "wlans_${wnic}="
 if [ $? -ne 0 ] ; then
   sysrc wlans_${wnic}="${WLAN}"
@@ -49,11 +52,13 @@ if [ $? -ne 0 ] ; then
   service netif restart ${WLAN}
   cat /etc/rc.conf | grep ${wnic} | cut -d'"' -f2 > /tmp/wlan-selection
   WLAN=$(cat /tmp/wlan-selection)
+  ifconfig ${WLAN} up scan
   killall wpa_gui 2>/dev/null || true
   wpa_gui -i ${WLAN}
 else
   cat /etc/rc.conf | grep ${wnic} | cut -d'"' -f2 > /tmp/wlan-selection
   WLAN=$(cat /tmp/wlan-selection)
+  ifconfig ${WLAN} up scan
   killall wpa_gui 2>/dev/null || true
   wpa_gui -i ${WLAN}
 fi
