@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/usr/bin/env bash
 
 # Only run as superuser
 if [ "$(id -u)" != "0" ]; then
